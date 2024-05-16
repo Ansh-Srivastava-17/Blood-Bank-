@@ -1,0 +1,316 @@
+SELECT d.bd_name
+FROM Donor d
+INNER JOIN City c ON d.City_ID = c.City_ID
+WHERE c.City_name = 'Austin' AND d.bd_reg_date >= '2016-08-9';
+
+select Donor.bd_name,Recipient.reci_name,reco_Name from 
+Recording_Staff
+inner join Donor on Recording_Staff.reco_ID = Donor.reco_ID inner join Recipient
+on Recording_Staff.reco_ID = Recipient.reco_ID where Donor.bd_Bgroup =
+Recipient.reci_Brgp;
+
+SELECT h1.hosp_ID, h1.hosp_name, h1.City_ID,h1.M_id,
+ h2.hosp_needed_Bgrp,h2.hosp_needed_qnty
+FROM Hospital_Info_1 h1
+INNER JOIN Hospital_Info_2 h2
+ON h1.hosp_ID = h2.hosp_ID;
+
+Select b1.specimen_number,b1.b_group,b1.status_available,b1.dfind_ID,b1.M_id,
+b1.status_blood,
+d1.dfind_name,d1.dfind_PhNo,d1.specialization_doctor 
+from BloodSpecimen b1 join DiseaseFinder d1 
+on b1.dfind_ID=d1.dfind_ID;
+
+Select b1.specimen_number,b1.b_group,b1.status_available,b1.dfind_ID,b1.M_id,
+b1.status_blood,m.mName,m.m_phNo
+from BloodSpecimen b1 join Manager m
+on b1.M_id=m.M_id;
+
+SELECT bd_name, bd_age, bd_Bgroup, mName, City_name
+FROM Donor
+JOIN Manager ON Donor.reco_ID = Manager.M_id
+JOIN City ON Donor.City_ID = City.City_ID
+WHERE City_name = 'Dallas';
+
+SELECT m.mName
+    FROM Manager m
+    INNER JOIN Recording_Staff rs ON m.M_id = rs.reco_ID
+    WHERE rs.reco_ID = v_reco_id;
+
+
+
+
+
+declare
+mid Manager.M_id%type;
+mname Manager.mName%type;
+begin
+select M_id into mid from Manager where M_id=1;
+exception
+when NO_DATA_FUND then 
+	dbms_output.put_line('No Data Found');
+when TOO_MANY_ROWS then
+	dbms_output.put_line('Too many records');
+end;
+
+
+DECLARE
+  dis_name DiseaseFinder.dfind_name%type;
+  
+  cursor c1(d number) is select dfind_name from DiseaseFinder where dfind_ID = d;
+BEGIN
+  open c1(11);
+  LOOP
+    fetch c1 into dis_name;
+    exit when c1%notfound;
+    dbms_output.put_line(dis_name);
+  END LOOP;
+  close c1;
+END;
+
+
+declare
+choice integer;
+num int;
+begin
+    choice:=0;
+if choice=1 then
+	select count(*) into num from BloodSpecimen where status_blood='infected' group by status_blood ;
+	dbms_output.put_line(num);
+elsif choice=0 then
+    select count(*) into num from BloodSpecimen where status_blood='non_infected' group by status_blood ;
+	dbms_output.put_line(num);
+end if;
+end;
+
+
+declare
+hopq Hospital_Info_2.hosp_needed_qnty%type;
+hopid  Hospital_Info_2.hosp_ID%type;
+hopname Hospital_Info_2.hosp_name%type;
+-- d integer;
+cursor  c1(d integer) is select hosp_needed_qnty,hosp_ID,hosp_name from 
+    Hospital_Info_2 where rownum<=d order by hosp_needed_qnty desc;
+begin
+open c1(5);
+loop
+fetch c1 into hopq,hopid,hopname;
+exit when c1%notfound;
+dbms_output.put_line(hopq||' '||hopid||' '||hopname);
+end loop;
+close c1;
+end;
+
+
+
+DECLARE
+  disease_name varchar2(20) := 'TB';
+BEGIN
+  -- Delete all matching records from the Disease table
+  DELETE FROM Disease
+  WHERE disease_name = disease_name;
+  
+  -- Delete matching records from the BloodSpecimen table using a subquery
+  DELETE FROM BloodSpecimen
+  WHERE specimen_number IN (
+    SELECT specimen_number
+    FROM Disease d
+    JOIN BloodSpecimen bs ON bs.b_group = d.bgroup
+    AND bs.specimen_number = d.blood_specimen_no
+    WHERE d.disease_name = disease_name
+  );
+  
+  -- Output success message
+  dbms_output.put_line('Blood specimens with disease ' || disease_name || ' deleted successfully.');
+END;
+
+
+
+DECLARE
+  v_donor_name Donor.bd_name%TYPE;
+  v_recording_staff_name Recording_Staff.reco_Name%TYPE;
+BEGIN
+  SELECT d.bd_name, r.reco_Name
+  INTO v_donor_name, v_recording_staff_name
+  FROM Donor d
+  JOIN Recording_Staff r ON d.reco_ID = r.reco_ID
+  WHERE d.bd_Bgroup = 'O+' AND d.City_ID = 1100;
+  
+  DBMS_OUTPUT.PUT_LINE('The donor name is ' || v_donor_name);
+  DBMS_OUTPUT.PUT_LINE('The recording staff name is ' || v_recording_staff_name);
+END;
+
+
+
+
+
+
+create table Doctorr( num_of_patients int, doctor_name varchar(20));
+CREATE OR REPLACE TRIGGER UpdateDoctor
+AFTER INSERT ON DiseaseFinder
+FOR EACH ROW
+DECLARE
+  v_specialization DiseaseFinder.specialization_doctor%TYPE := 'gynecologist';
+BEGIN
+  IF :NEW.specialization_doctor = v_specialization THEN
+    UPDATE Doctorr
+    SET num_of_patients = num_of_patients + 1
+    WHERE doctor_name = :NEW.dfind_name;
+  END IF;
+END;
+/
+
+
+create table Recording_Staff_Log(reco_ID int, reco_Name varchar(20), reco_phNo int , added_date varchar(20));
+
+INSERT INTO Recording_Staff (reco_ID, reco_Name, reco_phNo) VALUES (1, 'John Doe', 1234567890);
+CREATE OR REPLACE TRIGGER RecordStaffAdded
+AFTER INSERT ON Recording_Staff
+FOR EACH ROW
+DECLARE
+BEGIN
+  INSERT INTO Recording_Staff_Log (reco_ID, reco_Name, reco_phNo, added_date)
+  VALUES (:NEW.reco_ID, :NEW.reco_Name, :NEW.reco_phNo, SYSDATE);
+END;
+/
+
+
+
+SELECT * FROM Recording_Staff;
+SELECT * FROM Recording_Staff_Log;
+
+DECLARE
+  v_city_name City.City_name%TYPE;
+BEGIN
+  GetCityName(p_id => 1200, o_name => v_city_name);
+  DBMS_OUTPUT.PUT_LINE('City name: ' || v_city_name);
+END;
+
+
+
+
+
+INSERT INTO DiseaseFinder (dfind_ID,dfind_name,dfind_PhNo,specialization_doctor ) VALUES (157283,'Dr. Jane Smith',76437653,'gynecologist' );
+-- create table Doctrr( num_of_patients int, doctor_name varchar(20));
+CREATE OR REPLACE TRIGGER UpdateDoctrr
+AFTER INSERT ON DiseaseFinder
+FOR EACH ROW
+DECLARE
+  v_specialization DiseaseFinder.specialization_doctor%TYPE := 'gynecologist';
+BEGIN
+  IF :NEW.specialization_doctor = v_specialization THEN
+    UPDATE Doctrr
+    SET num_of_patients = num_of_patients + 1
+    WHERE doctor_name = :NEW.dfind_name;
+  END IF;
+END;
+/
+
+SELECT * FROM Doctrr;
+
+
+CREATE OR REPLACE PROCEDURE GetDonorsByCity (
+  p_city_name IN City.City_name%TYPE,
+  o_donor_names OUT SYS_REFCURSOR
+)
+IS
+BEGIN
+  OPEN o_donor_names FOR
+    SELECT bd_name
+    FROM Donor
+    INNER JOIN City
+      ON Donor.City_ID = City.City_ID
+    WHERE City.City_name = p_city_name;
+END;
+/
+
+DECLARE
+  v_donor_names SYS_REFCURSOR;
+  v_donor_name Donor.bd_name%TYPE;
+BEGIN
+  GetDonorsByCity('new_york', v_donor_names);
+  LOOP
+    FETCH v_donor_names INTO v_donor_name;
+    EXIT WHEN v_donor_names%NOTFOUND;
+    DBMS_OUTPUT.PUT_LINE(v_donor_name);
+  END LOOP;
+  CLOSE v_donor_names;
+END;
+/
+
+
+
+CREATE OR REPLACE PROCEDURE get_infected_blood(spec_out OUT SYS_REFCURSOR)
+IS
+BEGIN
+  OPEN spec_out FOR
+  SELECT specimen_number, b_group, status_available, dfind_ID, M_id, status_blood
+  FROM BloodSpecimen
+  WHERE status_blood = 'infected';
+END;
+/
+
+DECLARE
+  spec_out SYS_REFCURSOR;
+  v_specimen_number BloodSpecimen.specimen_number%TYPE;
+  v_b_group BloodSpecimen.b_group%TYPE;
+  v_status_available BloodSpecimen.status_available%TYPE;
+  v_dfind_ID BloodSpecimen.dfind_ID%TYPE;
+  v_M_id BloodSpecimen.M_id%TYPE;
+  v_status_blood BloodSpecimen.status_blood%TYPE;
+BEGIN
+  get_infected_blood(spec_out);
+  LOOP
+    FETCH spec_out INTO v_specimen_number, v_b_group, v_status_available, v_dfind_ID, v_M_id, v_status_blood;
+    EXIT WHEN spec_out%NOTFOUND;
+    DBMS_OUTPUT.PUT_LINE(v_specimen_number || ' ' || v_b_group || ' ' || v_status_available || ' ' || v_dfind_ID || ' ' || v_M_id || ' ' || v_status_blood);
+  END LOOP;
+  CLOSE spec_out;
+END;
+/
+
+
+CREATE OR REPLACE PROCEDURE get_infected_blood(spec_out OUT SYS_REFCURSOR)
+IS
+BEGIN
+  OPEN spec_out FOR
+  SELECT specimen_number, b_group, status_available, dfind_ID, M_id, status_blood
+  FROM BloodSpecimen
+  WHERE status_blood = 'infected';
+END;
+/
+
+DECLARE
+  spec_out SYS_REFCURSOR;
+  v_specimen_number BloodSpecimen.specimen_number%TYPE;
+  v_b_group BloodSpecimen.b_group%TYPE;
+  v_status_available BloodSpecimen.status_available%TYPE;
+  v_dfind_ID BloodSpecimen.dfind_ID%TYPE;
+  v_M_id BloodSpecimen.M_id%TYPE;
+  v_status_blood BloodSpecimen.status_blood%TYPE;
+BEGIN
+  get_infected_blood(spec_out);
+  LOOP
+    FETCH spec_out INTO v_specimen_number, v_b_group, v_status_available, v_dfind_ID, v_M_id, v_status_blood;
+    EXIT WHEN spec_out%NOTFOUND;
+    DBMS_OUTPUT.PUT_LINE(v_specimen_number || ' ' || v_b_group || ' ' || v_status_available || ' ' || v_dfind_ID || ' ' || v_M_id || ' ' || v_status_blood);
+  END LOOP;
+  CLOSE spec_out;
+END;
+/
+
+create table  Hospital_Info_neww(hosp_ID int,hosp_name varchar(20), City_ID int);
+INSERT INTO Hospital_Info_neww (hosp_ID ,hosp_name , City_ID  ) VALUES (1,'Mayo Clinic',1100);
+-- create table  Hospital_Info_neww(hosp_ID int,hosp_name varchar(20), City_ID int);
+CREATE OR REPLACE TRIGGER insert_hospital_info
+AFTER INSERT ON Hospital_Info_1
+FOR EACH ROW
+BEGIN
+  INSERT INTO Hospital_Info_neww(hosp_ID, hosp_name, City_ID)
+  VALUES(:new.hosp_ID, :new.hosp_name, :new.City_ID);
+END;
+/
+select* from Hospital_Info_neww;
+
+
+
